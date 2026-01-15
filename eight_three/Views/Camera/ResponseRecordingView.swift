@@ -154,14 +154,6 @@ struct ResponseEditingView: View {
                 
                 // Editing Controls
                 VStack(spacing: 15) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Add Text Overlay")
-                            .font(.system(size: 16, weight: .medium))
-                        TextField("Enter text...", text: $viewModel.overlayText)
-                            .textFieldStyle(.roundedBorder)
-                    }
-                    .padding(.horizontal)
-                    
                     if let errorMessage = viewModel.errorMessage {
                         Text(errorMessage)
                             .font(.system(size: 14))

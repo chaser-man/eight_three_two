@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct MainTabView: View {
-    @State private var selectedTab = 1
+    @State private var selectedTab = 0 // Start on Feed tab (0) instead of Camera (1)
     
     var body: some View {
         TabView(selection: $selectedTab) {

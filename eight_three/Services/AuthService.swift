@@ -15,7 +15,7 @@ import UIKit
 class AuthService: ObservableObject {
     @Published var currentUser: User?
     @Published var isAuthenticated = false
-    @Published var isLoading = false
+    @Published var isLoading = true // Start as true to prevent flash of onboarding
     @Published var errorMessage: String?
     
     private let userService = UserService()
@@ -26,10 +26,15 @@ class AuthService: ObservableObject {
     }
     
     func checkAuthState() {
+        isLoading = true
         if let firebaseUser = Auth.auth().currentUser {
             Task {
                 await loadUserData(userId: firebaseUser.uid)
+                isLoading = false
             }
+        } else {
+            // No authenticated user, show onboarding
+            isLoading = false
         }
     }
     
@@ -92,6 +97,7 @@ class AuthService: ObservableObject {
             print("Error loading user data: \(error)")
             isAuthenticated = false
         }
+        isLoading = false
     }
     
     func validateEmailDomain(_ email: String) -> Bool {

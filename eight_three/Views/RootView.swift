@@ -12,7 +12,12 @@ struct RootView: View {
     
     var body: some View {
         Group {
-            if authService.isAuthenticated {
+            if authService.isLoading {
+                // Show loading screen while checking auth state to prevent flash
+                ProgressView("Loading...")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Color(.systemBackground))
+            } else if authService.isAuthenticated {
                 if authService.currentUser != nil {
                     MainTabView()
                 } else {
