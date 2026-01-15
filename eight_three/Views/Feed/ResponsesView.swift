@@ -14,21 +14,37 @@ struct ResponsesView: View {
     @StateObject private var viewModel = ResponsesViewModel()
     @Environment(\.dismiss) var dismiss
     @State private var showingResponseRecording = false
+    @State private var currentIndex: Int? = 0
     
     var body: some View {
         NavigationStack {
-            ScrollView {
-                LazyVStack(spacing: 0) {
-                    ForEach(viewModel.responses) { response in
-                        ResponseVideoPlayer(
-                            response: response,
-                            viewModel: viewModel
-                        )
-                        .frame(height: UIScreen.main.bounds.height)
+            GeometryReader { geometry in
+                ScrollView(.vertical) {
+                    LazyVStack(spacing: 0) {
+                        ForEach(Array(viewModel.responses.enumerated()), id: \.element.id) { index, response in
+                            ResponseVideoPlayer(
+                                response: response,
+                                isActive: index == (currentIndex ?? 0),
+                                viewModel: viewModel
+                            )
+                            .frame(width: geometry.size.width, height: geometry.size.height)
+                            .id(index)
+                        }
+                    }
+                    .scrollTargetLayout()
+                }
+                .scrollTargetBehavior(.paging)
+                .scrollPosition(id: $currentIndex)
+                .onChange(of: currentIndex) { oldValue, newValue in
+                    if let newIndex = newValue {
+                        // Could add preloading logic here if needed
+                        print("Scrolled to response index: \(newIndex)")
                     }
                 }
             }
+            .ignoresSafeArea()
             .navigationTitle("Responses")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Record Response") {
@@ -47,12 +63,19 @@ struct ResponsesView: View {
             .task {
                 await viewModel.loadResponses(videoId: videoId)
             }
+            .onAppear {
+                // Initialize currentIndex to 0 when view appears
+                if currentIndex == nil {
+                    currentIndex = 0
+                }
+            }
         }
     }
 }
 
 struct ResponseVideoPlayer: View {
     let response: Video
+    let isActive: Bool
     @ObservedObject var viewModel: ResponsesViewModel
     @State private var player: AVPlayer?
     @State private var showingNestedResponses = false
@@ -65,11 +88,22 @@ struct ResponseVideoPlayer: View {
             if let player = player {
                 VideoPlayer(player: player)
                     .disabled(true)
+                    .allowsHitTesting(false) // Allow touches to pass through to overlay buttons
+                    .ignoresSafeArea()
                     .onAppear {
-                        player.play()
+                        if isActive {
+                            player.play()
+                        }
                     }
                     .onDisappear {
                         player.pause()
+                    }
+                    .onChange(of: isActive) { active in
+                        if active {
+                            player.play()
+                        } else {
+                            player.pause()
+                        }
                     }
             } else {
                 AsyncImage(url: URL(string: response.thumbnailURL)) { image in
@@ -81,12 +115,15 @@ struct ResponseVideoPlayer: View {
                         .fill(Color.black)
                         .overlay(ProgressView().tint(.white))
                 }
+                .ignoresSafeArea()
                 .onAppear {
-                    loadVideo()
+                    if isActive {
+                        loadVideo()
+                    }
                 }
             }
             
-            // Overlay Controls
+            // Overlay Controls - ensure this is on top and can receive touches
             VStack {
                 Spacer()
                 
@@ -174,6 +211,12 @@ struct ResponseVideoPlayer: View {
                     .padding(.trailing, 20)
                     .padding(.bottom, 30)
                 }
+            }
+            .allowsHitTesting(true) // Ensure overlay can receive touches
+        }
+        .onChange(of: isActive) { active in
+            if active && player == nil {
+                loadVideo()
             }
         }
         .fullScreenCover(isPresented: $showingNestedResponses) {

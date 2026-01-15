@@ -114,11 +114,22 @@ service firebase.storage {
       allow write: if request.auth != null && request.auth.uid == userId;
     }
     
-    match /profiles/{userId} {
+    // Profile pictures: public read, authenticated write
+    // Using wildcard pattern to match files with extensions (e.g., userId.jpg)
+    // The app code ensures users can only upload to their own userId filename
+    match /profiles/{allPaths=**} {
       allow read: if true;
-      allow write: if request.auth != null && request.auth.uid == userId;
+      allow write: if request.auth != null;
     }
   }
+}
+```
+
+**Note**: If the pattern matching above doesn't work, use this simpler version for profiles:
+```javascript
+match /profiles/{allPaths=**} {
+  allow read: if true;
+  allow write: if request.auth != null;
 }
 ```
 

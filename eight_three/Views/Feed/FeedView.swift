@@ -8,11 +8,13 @@
 import SwiftUI
 import AVKit
 import FirebaseAuth
+import FirebaseFirestore
 import Combine
 
 struct FeedView: View {
     @StateObject private var viewModel = FeedViewModel()
     @State private var currentIndex: Int? = 0
+    @EnvironmentObject var authService: AuthService
     
     var body: some View {
         NavigationStack {
@@ -81,7 +83,8 @@ struct FeedView: View {
                         FeedVideoPlayer(
                             video: video,
                             isActive: index == (currentIndex ?? 0),
-                            viewModel: viewModel
+                            viewModel: viewModel,
+                            authService: authService
                         )
                         .frame(width: geometry.size.width, height: geometry.size.height)
                         .id(index)
@@ -111,10 +114,15 @@ struct FeedVideoPlayer: View {
     let video: Video
     let isActive: Bool
     @ObservedObject var viewModel: FeedViewModel
+    @ObservedObject var authService: AuthService
     @State private var player: AVPlayer?
     @State private var showingWaves = false
     @State private var showingWaveRecording = false
     @State private var userInteraction: InteractionType?
+    @State private var videoUser: User?
+    @State private var showingUserProfile = false
+    
+    private let userService = UserService()
     
     // Get the current video from viewModel to ensure we always have the latest data
     private var currentVideo: Video {
@@ -127,6 +135,7 @@ struct FeedVideoPlayer: View {
             if let player = player {
                 VideoPlayer(player: player)
                     .disabled(true)
+                    .allowsHitTesting(false) // Allow touches to pass through to overlay buttons
                     .ignoresSafeArea()
                     .onAppear {
                         if isActive {
@@ -165,35 +174,117 @@ struct FeedVideoPlayer: View {
                 }
             }
             
-            // Overlay Controls
+            // Overlay Controls - ensure this is on top and can receive touches
             VStack {
                 Spacer()
                 
-                HStack {
-                    // Left side - Like button only (moved down to where dislike was)
-                    Button(action: {
-                        Task {
-                            await toggleLike()
+                HStack(alignment: .bottom) {
+                    // Left side - Like button and profile section
+                    VStack(spacing: 12) {
+                        // Like button (moved up to be parallel with Record Wave)
+                        Button(action: {
+                            print("🔘 Like button tapped! videoId: \(video.id)")
+                            Task {
+                                await toggleLike()
+                            }
+                        }) {
+                            VStack(spacing: 4) {
+                                Image(systemName: userInteraction == .like ? "hand.thumbsup.fill" : "hand.thumbsup")
+                                    .font(.system(size: 30))
+                                    .foregroundColor(userInteraction == .like ? .blue : .white)
+                                Text("\(currentVideo.likeCount)")
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundColor(.white)
+                            }
+                            .padding()
+                            .background(Color.black.opacity(0.4))
+                            .cornerRadius(12)
+                            .contentShape(Rectangle()) // Ensure entire button area is tappable
                         }
-                    }) {
-                        VStack(spacing: 4) {
-                            Image(systemName: userInteraction == .like ? "hand.thumbsup.fill" : "hand.thumbsup")
-                                .font(.system(size: 30))
-                                .foregroundColor(userInteraction == .like ? .blue : .white)
-                            Text("\(currentVideo.likeCount)")
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundColor(.white)
+                        .buttonStyle(PlainButtonStyle()) // Use plain style to avoid default button behavior
+                        
+                        // Profile picture and name section
+                        if let user = videoUser {
+                            Button(action: {
+                                showingUserProfile = true
+                            }) {
+                                VStack(spacing: 6) {
+                                    // Profile picture
+                                    if let profilePictureURL = user.profilePictureURL,
+                                       let url = URL(string: profilePictureURL) {
+                                        AsyncImage(url: url) { image in
+                                            image
+                                                .resizable()
+                                                .scaledToFill()
+                                        } placeholder: {
+                                            Circle()
+                                                .fill(Color.gray.opacity(0.5))
+                                                .overlay(
+                                                    Image(systemName: "person.fill")
+                                                        .foregroundColor(.white)
+                                                        .font(.system(size: 20))
+                                                )
+                                        }
+                                        .frame(width: 50, height: 50)
+                                        .clipShape(Circle())
+                                        .overlay(
+                                            Circle()
+                                                .stroke(Color.white, lineWidth: 2)
+                                        )
+                                    } else {
+                                        Circle()
+                                            .fill(Color.gray.opacity(0.5))
+                                            .frame(width: 50, height: 50)
+                                            .overlay(
+                                                Image(systemName: "person.fill")
+                                                    .foregroundColor(.white)
+                                                    .font(.system(size: 20))
+                                            )
+                                            .overlay(
+                                                Circle()
+                                                    .stroke(Color.white, lineWidth: 2)
+                                            )
+                                    }
+                                    
+                                    // User name
+                                    Text(user.displayName)
+                                        .font(.system(size: 12, weight: .semibold))
+                                        .foregroundColor(.white)
+                                        .lineLimit(1)
+                                        .frame(maxWidth: 70)
+                                }
+                                .padding(.vertical, 8)
+                                .padding(.horizontal, 10)
+                                .background(Color.black.opacity(0.4))
+                                .cornerRadius(12)
+                            }
+                        } else {
+                            // Loading placeholder
+                            VStack(spacing: 6) {
+                                Circle()
+                                    .fill(Color.gray.opacity(0.5))
+                                    .frame(width: 50, height: 50)
+                                    .overlay(
+                                        ProgressView()
+                                            .tint(.white)
+                                            .scaleEffect(0.7)
+                                    )
+                                Text("Loading...")
+                                    .font(.system(size: 10))
+                                    .foregroundColor(.white.opacity(0.7))
+                            }
+                            .padding(.vertical, 8)
+                            .padding(.horizontal, 10)
+                            .background(Color.black.opacity(0.4))
+                            .cornerRadius(12)
                         }
-                        .padding()
-                        .background(Color.black.opacity(0.4))
-                        .cornerRadius(12)
                     }
                     .padding(.leading, 20)
-                    .padding(.bottom, 90) // Positioned where dislike was (30 original + 20 spacing + ~40 for button), with extra to clear tab bar
+                    .padding(.bottom, 90) // Match the right side padding to align with Record Wave button
                     
                     Spacer()
                     
-                    // Right side - Wave buttons (moved up)
+                    // Right side - Wave buttons
                     VStack(spacing: 20) {
                         Button(action: {
                             showingWaveRecording = true
@@ -231,9 +322,10 @@ struct FeedVideoPlayer: View {
                         }
                     }
                     .padding(.trailing, 20)
-                    .padding(.bottom, 90) // Increased padding to move buttons up and clear tab bar
+                    .padding(.bottom, 90) // Keep same padding as before
                 }
             }
+            .allowsHitTesting(true) // Ensure overlay can receive touches
         }
         .fullScreenCover(isPresented: $showingWaves) {
             ResponsesView(videoId: video.id)
@@ -241,12 +333,32 @@ struct FeedVideoPlayer: View {
         .fullScreenCover(isPresented: $showingWaveRecording) {
             ResponseRecordingView(parentVideoId: video.id)
         }
+        .sheet(isPresented: $showingUserProfile) {
+            if let user = videoUser {
+                NavigationStack {
+                    UserProfileView(user: user)
+                        .environmentObject(authService)
+                }
+            }
+        }
         .task {
             await checkUserInteraction()
+            await loadUserData()
         }
         .onChange(of: isActive) { active in
             if active && player == nil {
                 loadVideo()
+            }
+            if active && videoUser == nil {
+                Task {
+                    await loadUserData()
+                }
+            }
+            if active {
+                // Re-check interaction state when video becomes active
+                Task {
+                    await checkUserInteraction()
+                }
             }
         }
     }
@@ -281,15 +393,37 @@ struct FeedVideoPlayer: View {
     }
     
     private func toggleLike() async {
+        print("🚀 toggleLike() called for video: \(video.id)")
+        
         guard let userId = FirebaseAuth.Auth.auth().currentUser?.uid else { 
             print("❌ No user ID available for like action")
             return 
         }
         
-        let interactionService = InteractionService()
-        let wasLiked = userInteraction == .like
+        print("✅ User ID found: \(userId)")
         
-        print("🔄 Toggle like - wasLiked: \(wasLiked), videoId: \(video.id)")
+        let interactionService = InteractionService()
+        
+        // First, check the actual state in Firestore to ensure we're in sync
+        let actualInteraction: InteractionType?
+        do {
+            print("🔍 Checking Firestore for existing interaction...")
+            if let interaction = try await interactionService.getInteraction(userId: userId, videoId: video.id) {
+                actualInteraction = interaction.type
+                print("✅ Found interaction in Firestore: \(interaction.type.rawValue)")
+            } else {
+                actualInteraction = nil
+                print("ℹ️ No interaction found in Firestore")
+            }
+        } catch {
+            print("⚠️ Error checking interaction state, using local state: \(error.localizedDescription)")
+            print("Error details: \(error)")
+            // Fall back to local state if Firestore check fails
+            actualInteraction = userInteraction
+        }
+        
+        let wasLiked = actualInteraction == .like
+        print("🔄 Toggle like - wasLiked: \(wasLiked), videoId: \(video.id), localState: \(userInteraction?.rawValue ?? "nil"), actualState: \(actualInteraction?.rawValue ?? "nil")")
         
         // Optimistic UI update - immediately update the local count and state
         // Update state first on main thread to ensure UI updates immediately
@@ -328,14 +462,61 @@ struct FeedVideoPlayer: View {
                 print("✅ unlikeVideo succeeded")
             } else {
                 print("📤 Calling likeVideo...")
-                try await interactionService.likeVideo(userId: userId, videoId: video.id)
-                print("✅ likeVideo succeeded")
+                // Use a direct approach - create the interaction document directly
+                // This avoids the toggle logic in likeVideo
+                let db = Firestore.firestore()
+                let likeInteractionId = "\(userId)_\(video.id)_like"
+                let dislikeInteractionId = "\(userId)_\(video.id)_dislike"
+                
+                // First, check if there's a dislike and remove it if present
+                let dislikeDoc = try await db.collection("interactions").document(dislikeInteractionId).getDocument()
+                if dislikeDoc.exists {
+                    try await db.collection("interactions").document(dislikeInteractionId).delete()
+                    // Decrement dislike count
+                    try await db.collection("videos").document(video.id).updateData([
+                        "dislikeCount": FieldValue.increment(Int64(-1))
+                    ])
+                    print("✅ Removed existing dislike before adding like")
+                }
+                
+                // Check if like interaction already exists
+                let likeDoc = try await db.collection("interactions").document(likeInteractionId).getDocument()
+                if !likeDoc.exists {
+                    // Create the like interaction
+                    let interactionData: [String: Any] = [
+                        "id": likeInteractionId,
+                        "userId": userId,
+                        "videoId": video.id,
+                        "type": InteractionType.like.rawValue,
+                        "createdAt": Timestamp()
+                    ]
+                    try await db.collection("interactions").document(likeInteractionId).setData(interactionData)
+                    // Update like count
+                    try await db.collection("videos").document(video.id).updateData([
+                        "likeCount": FieldValue.increment(Int64(1))
+                    ])
+                    print("✅ likeVideo succeeded (direct method)")
+                } else {
+                    print("⚠️ Like already exists, skipping")
+                }
+            }
+            
+            // Update userInteraction state after successful operation
+            await MainActor.run {
+                if wasLiked {
+                    userInteraction = nil
+                } else {
+                    userInteraction = .like
+                }
             }
             
             // Wait a moment for Firestore to propagate, then refresh to get accurate count
             try await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
             print("🔄 Refreshing video from Firestore...")
             await viewModel.refreshVideo(videoId: video.id)
+            
+            // Re-check interaction state to ensure sync
+            await checkUserInteraction()
         } catch {
             // If the update failed, revert the optimistic update
             print("❌ Error updating like: \(error.localizedDescription)")
@@ -364,11 +545,42 @@ struct FeedVideoPlayer: View {
     }
     
     private func checkUserInteraction() async {
-        guard let userId = FirebaseAuth.Auth.auth().currentUser?.uid else { return }
+        guard let userId = FirebaseAuth.Auth.auth().currentUser?.uid else { 
+            print("⚠️ No user ID available for checking interaction")
+            return 
+        }
         
         let interactionService = InteractionService()
-        if let interaction = try? await interactionService.getInteraction(userId: userId, videoId: video.id) {
-            userInteraction = interaction.type
+        do {
+            if let interaction = try await interactionService.getInteraction(userId: userId, videoId: video.id) {
+                await MainActor.run {
+                    userInteraction = interaction.type
+                    print("✅ Updated userInteraction state: \(interaction.type.rawValue) for video \(video.id)")
+                }
+            } else {
+                await MainActor.run {
+                    userInteraction = nil
+                    print("✅ No interaction found for video \(video.id), set to nil")
+                }
+            }
+        } catch {
+            print("❌ Error checking user interaction: \(error.localizedDescription)")
+            // Don't update state if there's an error - keep current state
+        }
+    }
+    
+    private func loadUserData() async {
+        // Only load if we don't already have the user data
+        guard videoUser == nil else { return }
+        
+        do {
+            if let user = try await userService.getUser(userId: video.userId) {
+                await MainActor.run {
+                    videoUser = user
+                }
+            }
+        } catch {
+            print("Error loading user data: \(error.localizedDescription)")
         }
     }
 }

@@ -178,11 +178,38 @@ struct UserSearchResultRow: View {
 struct UserProfileView: View {
     let user: User
     @StateObject private var viewModel = ProfileViewModel()
+    @StateObject private var followViewModel = SearchViewModel()
+    @EnvironmentObject var authService: AuthService
+    @State private var isFollowing: Bool?
+    
+    private var isCurrentUser: Bool {
+        authService.currentUser?.id == user.id
+    }
     
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
                 ProfileHeaderView(user: user, viewModel: viewModel)
+                
+                // Follow button (only show if not current user)
+                if !isCurrentUser, let followingStatus = isFollowing {
+                    Button(action: {
+                        Task {
+                            await followViewModel.toggleFollow(userId: user.id, isCurrentlyFollowing: followingStatus)
+                            await checkFollowingStatus()
+                        }
+                    }) {
+                        Text(followingStatus ? "Following" : "Follow")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(followingStatus ? .primary : .white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(followingStatus ? Color.gray.opacity(0.2) : Color.blue)
+                            .cornerRadius(10)
+                    }
+                    .padding(.horizontal, 40)
+                }
+                
                 ProfileStatsView(user: user)
                 ProfileVideoGrid(userId: user.id, viewModel: viewModel)
             }
@@ -190,6 +217,21 @@ struct UserProfileView: View {
         .navigationTitle(user.displayName)
         .task {
             await viewModel.loadUserVideos(userId: user.id)
+            if !isCurrentUser {
+                await checkFollowingStatus()
+            }
+        }
+    }
+    
+    private func checkFollowingStatus() async {
+        guard let currentUserId = authService.currentUser?.id else { return }
+        do {
+            let following = try await UserService().isFollowing(followerId: currentUserId, followingId: user.id)
+            await MainActor.run {
+                isFollowing = following
+            }
+        } catch {
+            print("Error checking follow status: \(error)")
         }
     }
 }

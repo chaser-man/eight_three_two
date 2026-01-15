@@ -88,12 +88,12 @@ class VideoService {
             chunks.append(Array(followingUserIds[i..<endIndex]))
         }
         
-        // Query each chunk
+        // Query each chunk without orderBy to avoid composite index requirement
+        // We'll sort in memory after merging all results
         for chunk in chunks {
             var query: Query = db.collection(videosCollection)
                 .whereField("userId", in: chunk)
                 .whereField("parentVideoId", isEqualTo: NSNull())
-                .order(by: "createdAt", descending: true)
                 .limit(to: pageSize * 2) // Get more to account for merging
             
             let snapshot = try await query.getDocuments()
@@ -114,15 +114,21 @@ class VideoService {
     }
     
     func getUserVideos(userId: String) async throws -> [Video] {
+        // Query without orderBy to avoid composite index requirement
+        // We'll sort in memory instead
         let snapshot = try await db.collection(videosCollection)
             .whereField("userId", isEqualTo: userId)
             .whereField("parentVideoId", isEqualTo: NSNull())
-            .order(by: "createdAt", descending: true)
             .getDocuments()
         
-        return try snapshot.documents.compactMap { document in
+        var videos = try snapshot.documents.compactMap { document in
             try decodeVideo(from: document.data(), id: document.documentID)
         }
+        
+        // Sort by createdAt descending in memory
+        videos.sort { $0.createdAt.dateValue() > $1.createdAt.dateValue() }
+        
+        return videos
     }
     
     func getVideoResponses(videoId: String) async throws -> [Video] {

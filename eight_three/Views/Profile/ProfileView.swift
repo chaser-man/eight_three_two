@@ -65,57 +65,88 @@ struct ProfileView: View {
 struct ProfileHeaderView: View {
     let user: User
     @ObservedObject var viewModel: ProfileViewModel
+    @EnvironmentObject var authService: AuthService
     @State private var showingImagePicker = false
+    
+    // Check if this is the current user's profile
+    private var isCurrentUser: Bool {
+        authService.currentUser?.id == user.id
+    }
+    
+    // Use current user data if viewing own profile, otherwise use passed user
+    private var displayUser: User {
+        if isCurrentUser, let currentUser = authService.currentUser {
+            return currentUser
+        }
+        return user
+    }
     
     var body: some View {
         VStack(spacing: 15) {
             Button(action: {
-                showingImagePicker = true
+                if isCurrentUser {
+                    showingImagePicker = true
+                }
             }) {
-                if let profilePictureURL = user.profilePictureURL,
-                   let url = URL(string: profilePictureURL) {
-                    AsyncImage(url: url) { image in
-                        image
-                            .resizable()
-                            .scaledToFill()
-                    } placeholder: {
+                ZStack {
+                    if let profilePictureURL = displayUser.profilePictureURL,
+                       let url = URL(string: profilePictureURL) {
+                        AsyncImage(url: url) { image in
+                            image
+                                .resizable()
+                                .scaledToFill()
+                        } placeholder: {
+                            Circle()
+                                .fill(Color.gray.opacity(0.3))
+                                .overlay(
+                                    Image(systemName: "person.fill")
+                                        .foregroundColor(.gray)
+                                )
+                        }
+                        .frame(width: 100, height: 100)
+                        .clipShape(Circle())
+                    } else {
                         Circle()
                             .fill(Color.gray.opacity(0.3))
+                            .frame(width: 100, height: 100)
                             .overlay(
                                 Image(systemName: "person.fill")
+                                    .font(.system(size: 40))
                                     .foregroundColor(.gray)
                             )
                     }
-                    .frame(width: 100, height: 100)
-                    .clipShape(Circle())
-                } else {
-                    Circle()
-                        .fill(Color.gray.opacity(0.3))
-                        .frame(width: 100, height: 100)
-                        .overlay(
-                            Image(systemName: "person.fill")
-                                .font(.system(size: 40))
-                                .foregroundColor(.gray)
-                        )
+                    
+                    // Loading indicator when uploading
+                    if viewModel.isLoading {
+                        Circle()
+                            .fill(Color.black.opacity(0.5))
+                            .frame(width: 100, height: 100)
+                            .overlay(
+                                ProgressView()
+                                    .tint(.white)
+                            )
+                    }
                 }
             }
+            .disabled(!isCurrentUser)
+            .opacity(isCurrentUser ? 1.0 : 0.8)
             .sheet(isPresented: $showingImagePicker) {
                 ImagePicker(image: Binding(
                     get: { nil },
                     set: { newImage in
                         if let newImage = newImage {
                             Task {
-                                await viewModel.updateProfilePicture(image: newImage)
+                                await viewModel.updateProfilePicture(image: newImage, authService: authService)
                             }
                         }
                     }
                 ))
             }
             
-            Text(user.displayName)
+            Text(displayUser.displayName)
                 .font(.system(size: 24, weight: .semibold))
             
-            if let bio = user.bio {
+            if let bio = displayUser.bio {
                 Text(bio)
                     .font(.system(size: 16))
                     .foregroundColor(.secondary)
@@ -123,11 +154,26 @@ struct ProfileHeaderView: View {
                     .padding(.horizontal)
             }
             
-            Text("\(user.school.rawValue) • Grade \(user.grade.rawValue)")
+            Text("\(displayUser.school.rawValue) • Grade \(displayUser.grade.rawValue)")
                 .font(.system(size: 14))
                 .foregroundColor(.secondary)
+            
+            // Show error message if profile picture upload failed
+            if let errorMessage = viewModel.errorMessage {
+                Text(errorMessage)
+                    .font(.system(size: 12))
+                    .foregroundColor(.red)
+                    .padding(.horizontal)
+                    .multilineTextAlignment(.center)
+            }
         }
         .padding(.top, 20)
+        .onChange(of: authService.currentUser?.profilePictureURL) { oldValue, newValue in
+            // Clear error when profile picture updates successfully
+            if newValue != nil && newValue != oldValue {
+                viewModel.errorMessage = nil
+            }
+        }
     }
 }
 
