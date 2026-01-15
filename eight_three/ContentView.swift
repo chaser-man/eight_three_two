@@ -4,18 +4,13 @@
 //
 //  Created by Chase Nielsen on 1/13/26.
 //
+//  Note: This file is kept for compatibility but RootView is the main entry point
 
 import SwiftUI
 
 struct ContentView: View {
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
-        }
-        .padding()
+        RootView()
     }
 }
 

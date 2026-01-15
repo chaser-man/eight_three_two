@@ -6,6 +6,14 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		4CADB53D2F175C4C00695B2F /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 4CADB53C2F175C4C00695B2F /* FirebaseAuth */; };
+		4CADB53F2F175C4C00695B2F /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = 4CADB53E2F175C4C00695B2F /* FirebaseCore */; };
+		4CADB5412F175C4C00695B2F /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 4CADB5402F175C4C00695B2F /* FirebaseFirestore */; };
+		4CADB5432F175C4C00695B2F /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = 4CADB5422F175C4C00695B2F /* FirebaseStorage */; };
+		4CADB5462F175C7100695B2F /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 4CADB5452F175C7100695B2F /* GoogleSignIn */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		4CADB3A92F17533300695B2F /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -52,6 +60,11 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4CADB5462F175C7100695B2F /* GoogleSignIn in Frameworks */,
+				4CADB53F2F175C4C00695B2F /* FirebaseCore in Frameworks */,
+				4CADB5432F175C4C00695B2F /* FirebaseStorage in Frameworks */,
+				4CADB53D2F175C4C00695B2F /* FirebaseAuth in Frameworks */,
+				4CADB5412F175C4C00695B2F /* FirebaseFirestore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -112,6 +125,11 @@
 			);
 			name = eight_three;
 			packageProductDependencies = (
+				4CADB53C2F175C4C00695B2F /* FirebaseAuth */,
+				4CADB53E2F175C4C00695B2F /* FirebaseCore */,
+				4CADB5402F175C4C00695B2F /* FirebaseFirestore */,
+				4CADB5422F175C4C00695B2F /* FirebaseStorage */,
+				4CADB5452F175C7100695B2F /* GoogleSignIn */,
 			);
 			productName = eight_three;
 			productReference = 4CADB3972F17533200695B2F /* eight_three.app */;
@@ -195,6 +213,10 @@
 			);
 			mainGroup = 4CADB38E2F17533200695B2F;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				4CADB53B2F175C4C00695B2F /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+				4CADB5442F175C7100695B2F /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 4CADB3982F17533200695B2F /* Products */;
 			projectDirPath = "";
@@ -392,8 +414,14 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"eight_three/Preview Content\"";
+				DEVELOPMENT_TEAM = 84MY68BU7A;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "eight-three-Info.plist";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Eight needs access to your camera to record videos.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Eight needs access to your microphone to record videos with audio.";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Eight needs access to save videos to your photo library.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Eight needs access to your photo library to select profile pictures.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -409,7 +437,7 @@
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 15.2;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "test.eight-three";
+				PRODUCT_BUNDLE_IDENTIFIER = com.chasenielsen.eightthree;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
@@ -429,8 +457,14 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"eight_three/Preview Content\"";
+				DEVELOPMENT_TEAM = 84MY68BU7A;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "eight-three-Info.plist";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Eight needs access to your camera to record videos.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Eight needs access to your microphone to record videos with audio.";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Eight needs access to save videos to your photo library.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Eight needs access to your photo library to select profile pictures.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -446,7 +480,7 @@
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 15.2;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "test.eight-three";
+				PRODUCT_BUNDLE_IDENTIFIER = com.chasenielsen.eightthree;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
@@ -583,6 +617,53 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		4CADB53B2F175C4C00695B2F /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 12.8.0;
+			};
+		};
+		4CADB5442F175C7100695B2F /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/google/GoogleSignIn-iOS";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 9.1.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		4CADB53C2F175C4C00695B2F /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 4CADB53B2F175C4C00695B2F /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+		4CADB53E2F175C4C00695B2F /* FirebaseCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 4CADB53B2F175C4C00695B2F /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseCore;
+		};
+		4CADB5402F175C4C00695B2F /* FirebaseFirestore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 4CADB53B2F175C4C00695B2F /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFirestore;
+		};
+		4CADB5422F175C4C00695B2F /* FirebaseStorage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 4CADB53B2F175C4C00695B2F /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseStorage;
+		};
+		4CADB5452F175C7100695B2F /* GoogleSignIn */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 4CADB5442F175C7100695B2F /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignIn;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 4CADB38F2F17533200695B2F /* Project object */;
 }
