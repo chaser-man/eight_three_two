@@ -9,6 +9,7 @@ import SwiftUI
 
 struct SearchView: View {
     @Environment(\.dismiss) var dismiss
+    @EnvironmentObject var authService: AuthService
     @StateObject private var viewModel = SearchViewModel()
     @State private var searchText = ""
     @State private var selectedSchool: School? = nil
@@ -23,12 +24,15 @@ struct SearchView: View {
                         .foregroundColor(.gray)
                     TextField("Search users...", text: $searchText)
                         .onSubmit {
+                            performSearch()
+                        }
+                        .onChange(of: searchText) { oldValue, newValue in
+                            // Debounce search - search after user stops typing for 0.5 seconds
                             Task {
-                                await viewModel.searchUsers(
-                                    query: searchText,
-                                    school: selectedSchool,
-                                    grade: selectedGrade
-                                )
+                                try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+                                if searchText == newValue {
+                                    performSearch()
+                                }
                             }
                         }
                 }
@@ -43,10 +47,12 @@ struct SearchView: View {
                         ForEach(School.allCases, id: \.self) { school in
                             Button(school.rawValue) {
                                 selectedSchool = school
+                                performSearch()
                             }
                         }
                         Button("All Schools") {
                             selectedSchool = nil
+                            performSearch()
                         }
                     } label: {
                         HStack {
@@ -63,10 +69,12 @@ struct SearchView: View {
                         ForEach(Grade.allCases, id: \.self) { grade in
                             Button(grade.rawValue) {
                                 selectedGrade = grade
+                                performSearch()
                             }
                         }
                         Button("All Grades") {
                             selectedGrade = nil
+                            performSearch()
                         }
                     } label: {
                         HStack {
@@ -83,15 +91,33 @@ struct SearchView: View {
                 }
                 .padding(.horizontal)
                 
+                // Error message
+                if let errorMessage = viewModel.errorMessage {
+                    Text(errorMessage)
+                        .font(.caption)
+                        .foregroundColor(.red)
+                        .padding(.horizontal)
+                }
+                
                 // Results
                 if viewModel.isLoading {
                     Spacer()
                     ProgressView()
                     Spacer()
-                } else if viewModel.searchResults.isEmpty && !searchText.isEmpty {
+                } else if viewModel.searchResults.isEmpty {
                     Spacer()
-                    Text("No users found")
-                        .foregroundColor(.secondary)
+                    VStack(spacing: 12) {
+                        Image(systemName: "person.3")
+                            .font(.system(size: 50))
+                            .foregroundColor(.secondary)
+                        Text(searchText.isEmpty ? "Start typing to search for users" : "No users found")
+                            .foregroundColor(.secondary)
+                        if !searchText.isEmpty {
+                            Text("Try adjusting your filters or search term")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
                     Spacer()
                 } else {
                     List(viewModel.searchResults) { user in
@@ -110,6 +136,22 @@ struct SearchView: View {
                     }
                 }
             }
+            .task {
+                // Set authService reference in viewModel
+                viewModel.authService = authService
+                // Perform initial search when view appears (show all users)
+                performSearch()
+            }
+        }
+    }
+    
+    private func performSearch() {
+        Task {
+            await viewModel.searchUsers(
+                query: searchText,
+                school: selectedSchool,
+                grade: selectedGrade
+            )
         }
     }
 }
@@ -181,6 +223,12 @@ struct UserProfileView: View {
     @StateObject private var followViewModel = SearchViewModel()
     @EnvironmentObject var authService: AuthService
     @State private var isFollowing: Bool?
+    @State private var displayedUser: User // Track user with updated stats
+    
+    init(user: User) {
+        self.user = user
+        _displayedUser = State(initialValue: user)
+    }
     
     private var isCurrentUser: Bool {
         authService.currentUser?.id == user.id
@@ -189,14 +237,15 @@ struct UserProfileView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
-                ProfileHeaderView(user: user, viewModel: viewModel)
+                ProfileHeaderView(user: displayedUser, viewModel: viewModel)
                 
                 // Follow button (only show if not current user)
                 if !isCurrentUser, let followingStatus = isFollowing {
                     Button(action: {
                         Task {
-                            await followViewModel.toggleFollow(userId: user.id, isCurrentlyFollowing: followingStatus)
+                            await followViewModel.toggleFollow(userId: displayedUser.id, isCurrentlyFollowing: followingStatus)
                             await checkFollowingStatus()
+                            await refreshUserData()
                         }
                     }) {
                         Text(followingStatus ? "Following" : "Follow")
@@ -210,28 +259,52 @@ struct UserProfileView: View {
                     .padding(.horizontal, 40)
                 }
                 
-                ProfileStatsView(user: user)
-                ProfileVideoGrid(userId: user.id, viewModel: viewModel)
+                ProfileStatsView(user: displayedUser)
+                ProfileVideoGrid(userId: displayedUser.id, viewModel: viewModel)
             }
         }
-        .navigationTitle(user.displayName)
+        .navigationTitle(displayedUser.displayName)
         .task {
-            await viewModel.loadUserVideos(userId: user.id)
+            // Set authService reference in followViewModel
+            followViewModel.authService = authService
+            await viewModel.loadUserVideos(userId: displayedUser.id)
             if !isCurrentUser {
                 await checkFollowingStatus()
             }
+            await refreshUserData()
         }
     }
     
     private func checkFollowingStatus() async {
         guard let currentUserId = authService.currentUser?.id else { return }
         do {
-            let following = try await UserService().isFollowing(followerId: currentUserId, followingId: user.id)
+            let following = try await UserService().isFollowing(followerId: currentUserId, followingId: displayedUser.id)
             await MainActor.run {
                 isFollowing = following
             }
         } catch {
             print("Error checking follow status: \(error)")
+        }
+    }
+    
+    private func refreshUserData() async {
+        do {
+            // Refresh the displayed user's data
+            if let updatedUser = try await UserService().getUser(userId: displayedUser.id) {
+                await MainActor.run {
+                    displayedUser = updatedUser
+                }
+            }
+            
+            // Also refresh the current user's data to update following count
+            if let currentUserId = authService.currentUser?.id,
+               let updatedCurrentUser = try await UserService().getUser(userId: currentUserId) {
+                await MainActor.run {
+                    authService.currentUser = updatedCurrentUser
+                }
+            }
+        } catch {
+            print("Error refreshing user data: \(error)")
         }
     }
 }

@@ -55,7 +55,7 @@ class UserService {
         try await db.collection(usersCollection).document(user.id).updateData(userData)
     }
     
-    func searchUsers(query: String, school: School? = nil, grade: Grade? = nil) async throws -> [User] {
+    func searchUsers(query: String, school: School? = nil, grade: Grade? = nil, excludeUserId: String? = nil) async throws -> [User] {
         var queryRef: Query = db.collection(usersCollection)
         
         if let school = school {
@@ -66,18 +66,28 @@ class UserService {
             queryRef = queryRef.whereField("grade", isEqualTo: grade.rawValue)
         }
         
+        // Limit results for performance (we can paginate later if needed)
+        queryRef = queryRef.limit(to: 50)
+        
         let snapshot = try await queryRef.getDocuments()
         
         return try snapshot.documents.compactMap { document in
+            let userId = document.documentID
+            
+            // Exclude current user from results
+            if let excludeId = excludeUserId, userId == excludeId {
+                return nil
+            }
+            
             let data = document.data()
             let displayName = data["displayName"] as? String ?? ""
             
-            // Filter by query string if provided
+            // Filter by query string if provided (case-insensitive search)
             if !query.isEmpty && !displayName.localizedCaseInsensitiveContains(query) {
                 return nil
             }
             
-            return try decodeUser(from: data, id: document.documentID)
+            return try decodeUser(from: data, id: userId)
         }
     }
     

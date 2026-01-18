@@ -197,8 +197,6 @@ struct FeedVideoPlayer: View {
                                     .foregroundColor(.white)
                             }
                             .padding()
-                            .background(Color.black.opacity(0.4))
-                            .cornerRadius(12)
                             .contentShape(Rectangle()) // Ensure entire button area is tappable
                         }
                         .buttonStyle(PlainButtonStyle()) // Use plain style to avoid default button behavior
@@ -255,8 +253,6 @@ struct FeedVideoPlayer: View {
                                 }
                                 .padding(.vertical, 8)
                                 .padding(.horizontal, 10)
-                                .background(Color.black.opacity(0.4))
-                                .cornerRadius(12)
                             }
                         } else {
                             // Loading placeholder
@@ -275,8 +271,6 @@ struct FeedVideoPlayer: View {
                             }
                             .padding(.vertical, 8)
                             .padding(.horizontal, 10)
-                            .background(Color.black.opacity(0.4))
-                            .cornerRadius(12)
                         }
                     }
                     .padding(.leading, 20)
@@ -298,8 +292,6 @@ struct FeedVideoPlayer: View {
                                     .foregroundColor(.white)
                             }
                             .padding()
-                            .background(Color.black.opacity(0.4))
-                            .cornerRadius(12)
                         }
                         
                         Button(action: {
@@ -317,8 +309,6 @@ struct FeedVideoPlayer: View {
                                     .foregroundColor(.white)
                             }
                             .padding()
-                            .background(Color.black.opacity(0.4))
-                            .cornerRadius(12)
                         }
                     }
                     .padding(.trailing, 20)
